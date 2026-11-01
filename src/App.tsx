@@ -17,6 +17,7 @@ import { BatchItem, DecryptedPdf, DecryptedVideo, FolderContentItem, UserSession
 import { 
   getCatalogBatches, 
   fetchCombinedEnrolledBatches,
+  getUserPurchasedBatches,
   loginUser, 
   getVideoDetails, 
   getPdfDetails, 
@@ -29,7 +30,7 @@ import { BatchView } from './components/BatchView';
 import { VideoPlayerModal } from './components/VideoPlayerModal';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { StudentLoginModal } from './components/StudentLoginModal';
-import { StudentLoginGate } from './components/StudentLoginGate';
+import { HomeStudentLoginBox } from './components/HomeStudentLoginBox';
 import { AdminPasswordModal } from './components/AdminPasswordModal';
 import { AdminAccountsModal } from './components/AdminAccountsModal';
 import { TelegramModal } from './components/TelegramModal';
@@ -232,8 +233,22 @@ export default function App() {
     localStorage.setItem('gb_study_sessions', JSON.stringify(updated));
     localStorage.setItem('gb_study_user', JSON.stringify(updated[0]));
 
-    // Global Cloud Broadcast: syncs account to all students & devices across the world!
-    saveSharedAccount(session, creds).catch(() => {});
+    // Immediately fetch all purchased batches (free + paid) for this student and activate them!
+    try {
+      const userPurchased = await getUserPurchasedBatches(session.userId, session.token);
+      if (userPurchased.length > 0) {
+        setEnrolledBatches((prev) => {
+          const m = new Map<string, BatchItem>();
+          for (const b of prev) m.set(b.id, b);
+          for (const b of userPurchased) m.set(b.id, b);
+          return Array.from(m.values());
+        });
+      }
+      // Global Cloud Broadcast: syncs account and its batches to all students & devices across the world!
+      saveSharedAccount(session, creds, userPurchased).catch(() => {});
+    } catch {
+      saveSharedAccount(session, creds).catch(() => {});
+    }
   };
 
   // Admin authentication handlers (10 Clicks on Logo -> Password GBADMIN2026)
@@ -445,62 +460,6 @@ export default function App() {
     return true;
   });
 
-  // Mandatory Student Login Gate: No student can enter website without logging in!
-  if (!isStudentLoggedIn) {
-    return (
-      <>
-        <StudentLoginGate
-          onLoginSuccess={(session, creds) => {
-            handleStudentLoginSuccess(session, false, creds);
-            setIsStudentLoggedIn(true);
-            localStorage.setItem('gb_student_logged_in', 'true');
-          }}
-          onOpenTelegram={() => setIsTelegramOpen(true)}
-          onAdminTrigger={() => {
-            const next = gateAdminClicks + 1;
-            setGateAdminClicks(next);
-            if (next >= 10) {
-              setGateAdminClicks(0);
-              setIsAdminAuthOpen(true);
-            }
-          }}
-          adminClickCount={gateAdminClicks}
-        />
-
-        {/* Telegram Modal */}
-        <TelegramModal
-          isOpen={isTelegramOpen}
-          onClose={() => setIsTelegramOpen(false)}
-        />
-
-        {/* Admin Password Modal */}
-        <AdminPasswordModal
-          isOpen={isAdminAuthOpen}
-          onClose={() => setIsAdminAuthOpen(false)}
-          onSuccess={() => {
-            setIsAdmin(true);
-            setIsAdminAuthOpen(false);
-            setIsAdminAccountsOpen(true);
-            setIsStudentLoggedIn(true);
-          }}
-        />
-
-        {/* Admin Accounts Management Modal */}
-        <AdminAccountsModal
-          isOpen={isAdminAccountsOpen}
-          onClose={() => setIsAdminAccountsOpen(false)}
-          sessions={sessions}
-          activeSessionIndex={activeSessionIndex}
-          onSwitchSession={(idx) => setActiveSessionIndex(idx)}
-          onAddSession={handleAddSession}
-          onRemoveSession={handleRemoveSession}
-          onLogoutAll={handleLogoutAll}
-          onLockAdmin={handleLockAdmin}
-        />
-      </>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-[#0b090d] text-zinc-100">
       
@@ -602,6 +561,14 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* Home Page Student Login System (Direct Batch Activation on Home Page) */}
+            <HomeStudentLoginBox
+              onLoginSuccess={(session, creds) => {
+                handleStudentLoginSuccess(session, false, creds);
+              }}
+              activeSessionsCount={sessions.length}
+            />
 
             {/* Filter & Search Bar */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">

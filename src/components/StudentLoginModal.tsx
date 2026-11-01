@@ -143,6 +143,55 @@ export const StudentLoginModal: React.FC<StudentLoginModalProps> = ({
               </>
             )}
           </button>
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800">
+            <span className="text-[10px] text-zinc-400">Quick Connect:</span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setPhone('9153679070');
+                  setPassword('@gaurav');
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    const session = await loginUser('9153679070', '@gaurav');
+                    onLoginSuccess(session, false, { phone: '9153679070', pass: '@gaurav' });
+                    onClose();
+                  } catch (e: any) {
+                    setError(e?.message || 'Login failed');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-pink-300 text-[10px] font-semibold border border-pink-500/20"
+              >
+                12th Server
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setPhone('7631501165');
+                  setPassword('babugaurav');
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    const session = await loginUser('7631501165', 'babugaurav');
+                    onLoginSuccess(session, false, { phone: '7631501165', pass: 'babugaurav' });
+                    onClose();
+                  } catch (e: any) {
+                    setError(e?.message || 'Login failed');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-pink-300 text-[10px] font-semibold border border-pink-500/20"
+              >
+                11th Server
+              </button>
+            </div>
+          </div>
         </form>
 
         <div className="mt-4 text-center text-[10px] text-zinc-500">
